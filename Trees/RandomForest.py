@@ -1,33 +1,36 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from Trees.Tree import Tree
+from Trees.Tree import TreeClassifier
 from metrics import accuracy
 
 
 class RandomForest:
-    def __init__(self, n_estimators, criterion, max_depth, max_features, random_state, n_jobs):
+    def __init__(self, n_estimators, criterion, max_depth, max_features, subsample, random_state, n_jobs, debug=False):
         self.n_estimators = n_estimators
         self.criterion = criterion
         self.max_depth = max_depth
         self.max_features = max_features
         self.random_state = random_state
         self.n_jobs = n_jobs
+        self.subsample = subsample
 
         self.forest = []
+
+        self.debug = debug
 
     def fit(self, df: pd.DataFrame, target: str):
         features_names = list(df.columns.values)
         features_names.remove(target)
 
         for _ in range(self.n_estimators):
-            tree = Tree(max_depth=self.max_depth, metric=accuracy, split_type=self.criterion)
-            train, _ = train_test_split(df, train_size=0.6)
+            tree = TreeClassifier(max_depth=self.max_depth, metric=accuracy, criterion=self.criterion, debug=self.debug)
+            train, _ = train_test_split(df, train_size=self.subsample)
             train_features, _ = train_test_split(features_names, train_size=self.max_features)
-            print(train_features)
+            if self.debug:
+                print(train_features)
             tree.fit(df[train_features + [target]], target)
             self.forest.append(tree)
-        print('Forest OK!')
 
     def predict(self, df: pd.DataFrame):
         predicts = []
