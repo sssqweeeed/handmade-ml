@@ -9,6 +9,8 @@ def mse(y_pred, y):
 def me(y_pred, y):
     return np.sum(np.abs(y - y_pred)) / y.size
 
+def error(y_pred, y):
+    return (y - y_pred)
 
 def accuracy(y_pred: pd.Series, y: pd.Series):
     y_pred = np.array(y_pred.values)
