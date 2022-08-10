@@ -3,14 +3,14 @@ import pandas as pd
 
 
 def mse(y_pred, y):
-    return np.sum((y - y_pred) ** 2) / y.size
+    return np.sum((np.array(y) - np.array(y_pred)) ** 2) / y.size
 
 
 def me(y_pred, y):
     return np.sum(np.abs(y - y_pred)) / y.size
 
 def error(y_pred, y):
-    return (y - y_pred)
+    return np.array(y) - np.array(y_pred)
 
 def accuracy(y_pred: pd.Series, y: pd.Series):
     y_pred = np.array(y_pred.values)

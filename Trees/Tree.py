@@ -23,7 +23,7 @@ class Tree:
 
         self.max_depth = max_depth
 
-        self.tree = None
+        self.tree: Node = None
 
         self.debug = debug
 
@@ -202,7 +202,7 @@ class Tree:
         values = np.array(data.sort_values())
         grid = (values[:-1] + values[1:]) / 2
 
-        print('find threshold in:', grid[0], grid[-1])
+        # print('find threshold in:', grid[0], grid[-1])
         return grid
 
     @staticmethod
@@ -241,6 +241,12 @@ class TreeRegressor(Tree):
             return None
         else:
             return {'left': np.mean(left_data[target]), 'right': np.mean(right_data[target])}
+
+    def trivial_fit(self, df: pd.DataFrame, target: str):
+        features_names = list(df.columns.values)
+        features_names.remove(target)
+        # todo value = np.mean
+        self.tree = Node(data=None, feature=features_names[0], threshold=0, fit_score=None, left_value=1, right_value=1)
 
 
 class TreeClassifier(Tree):
