@@ -1,5 +1,8 @@
+from typing import List
 import numpy as np
 import pandas as pd
+
+from tools import MyOneHotEncoder
 
 
 class Node:
@@ -16,13 +19,15 @@ class Node:
 
 
 class Tree:
-    def __init__(self, max_depth: int, metric, criterion, minimize=False, debug=True):
+    def __init__(self, max_depth: int, metric, criterion, minimize=False, cat_features=None, debug=True):
         self.metric = metric
         self.criterion = criterion
         self.minimize = minimize
 
         self.max_depth = max_depth
-
+        self.cat_features = cat_features
+        self.encoder = None
+        
         self.tree: Node = None
 
         self.debug = debug
@@ -35,10 +40,12 @@ class Tree:
 
     def find_best_split(self, df: pd.DataFrame, target: str):
         if len(df) <= 2:
-            self.print('Impossible to find split, len(df) <= 2\n------------------------------\n')
+            self.print(
+                'Impossible to find split, len(df) <= 2\n------------------------------\n')
             return None
         if len(set(df[target])) == 1:
-            self.print('Impossible to find split, len(set(df[target])) == 1\n------------------------------\n')
+            self.print(
+                'Impossible to find split, len(set(df[target])) == 1\n------------------------------\n')
             return None
 
         best_feature = None
@@ -56,13 +63,15 @@ class Tree:
         for col in df.columns:
             # todo remove hack to speed up
             if col != target:
-                threshold = Tree.split_by_feature(df, feature=col, target=target, criterion=self.criterion)['threshold']
-                values = self.find_values(data=df, feature=col, target=target, threshold=threshold)
+                threshold = Tree.split_by_feature(
+                    df, feature=col, target=target, criterion=self.criterion)['threshold']
+                values = self.find_values(
+                    data=df, feature=col, target=target, threshold=threshold)
                 if values is None:
                     # todo bugfix: if all values are equal to None, then the result will contain only None values
                     continue
-                self.print(f'feature:{col} values{values} '
-                           f'split_predict{self.split_predict(df, col, target, threshold, values)},\n')
+                self.print(f'feature: {col}, values {values} '
+                           f'split_predict {self.split_predict(df, col, target, threshold, values)}\n')
 
                 score = self.split_predict(df, col, target, threshold, values)
                 if self.minimize:
@@ -77,7 +86,6 @@ class Tree:
                         best_feature = col
                         best_threshold = threshold
                         best_classes = values.copy()
-
         result = {'best_score': best_score,
                   'best_feature': best_feature,
                   'best_threshold': best_threshold,
@@ -86,7 +94,7 @@ class Tree:
         self.print(f'{result} \n------------------------------\n')
         return result
 
-    def build_step(self, target: str, nodes_to_build: [Node]):
+    def build_step(self, target: str, nodes_to_build: List[Node]):
         if len(nodes_to_build) == 0:
             self.print('There are no nodes to build')
         next_step_build = []
@@ -94,7 +102,6 @@ class Tree:
 
             data_left = node.data[node.data[node.feature] <= node.threshold]
             data_right = node.data[node.data[node.feature] > node.threshold]
-
             left_split = self.find_best_split(data_left, target)
             right_split = self.find_best_split(data_right, target)
 
@@ -118,8 +125,16 @@ class Tree:
         return next_step_build
 
     # @dispatch(pd.DataFrame, str)
+
     def fit(self, df: pd.DataFrame, target: str):
         # todo X, y fit
+        if self.cat_features is not None:
+            self.encoder = MyOneHotEncoder()
+            enc_cat_features = pd.DataFrame(self.encoder.fit_transform(
+                X=df[self.cat_features]), index=df.index)
+            df = df.join(enc_cat_features)
+            df = df.drop(self.cat_features, axis=1)
+
         first_step_split = self.find_best_split(df, target)
         self.tree = Node(data=df,
                          feature=first_step_split['best_feature'],
@@ -131,7 +146,6 @@ class Tree:
 
         for _ in range(self.max_depth - 1):
             nodes_to_build = self.build_step(target, nodes_to_build)
-        # nodes_to_build = self.build_step(target, nodes_to_build)
         self.print('OK!')
 
     # @dispatch(pd.DataFrame, pd.DataFrame)
@@ -157,13 +171,19 @@ class Tree:
                 return node.right_value
 
     def predict(self, df: pd.DataFrame, predict_col: str):
+        if self.cat_features is not None:
+            enc_cat_features = pd.DataFrame(self.encoder.transform(
+                X=df[self.cat_features]), index=df.index)
+            df = df.join(enc_cat_features)
+            df = df.drop(self.cat_features, axis=1)
+        
         # todo optimize predict
         predicts = []
         for i, row in df.iterrows():
             predicts.append(self.passing_tree(self.tree, row))
         if predict_col is not None:
             df[predict_col] = predicts
-            # return df
+            return df
         else:
             return np.array(predicts)
 
@@ -194,8 +214,8 @@ class Tree:
         len_R = len(data)
 
         return Tree.H(data[target], criterion=criterion) - \
-               (len_left / len_R) * Tree.H(R_left, criterion=criterion) - \
-               (len_right / len_R) * Tree.H(R_right, criterion=criterion)
+            (len_left / len_R) * Tree.H(R_left, criterion=criterion) - \
+            (len_right / len_R) * Tree.H(R_right, criterion=criterion)
 
     @staticmethod
     def get_grid(data: pd.Series):
@@ -245,8 +265,9 @@ class TreeRegressor(Tree):
     def trivial_fit(self, df: pd.DataFrame, target: str):
         features_names = list(df.columns.values)
         features_names.remove(target)
-        # todo value = np.mean
-        self.tree = Node(data=None, feature=features_names[0], threshold=0, fit_score=None, left_value=1, right_value=1)
+        mean = np.mean(df[target])
+        self.tree = Node(
+            data=None, feature=features_names[0], threshold=0, fit_score=None, left_value=mean, right_value=mean)
 
 
 class TreeClassifier(Tree):
