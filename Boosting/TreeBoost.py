@@ -14,7 +14,6 @@ class SimpleTreeBoostRegressor:
         self.metric = metric
         self.derivative = derivative
         self.subsample = subsample
-        # todo is it correct meaning?
         self.colsample_bytree = colsample_bytree
         self.max_depth = max_depth
         self.criterion = criterion
