@@ -126,8 +126,7 @@ class Tree:
 
     # @dispatch(pd.DataFrame, str)
 
-    def fit(self, df: pd.DataFrame, target: str):
-        # todo X, y fit
+    def fit_legacy(self, df: pd.DataFrame, target: str):
         if self.cat_features is not None:
             self.encoder = MyOneHotEncoder()
             enc_cat_features = pd.DataFrame(self.encoder.fit_transform(
@@ -147,16 +146,19 @@ class Tree:
         for _ in range(self.max_depth - 1):
             nodes_to_build = self.build_step(target, nodes_to_build)
         self.print('OK!')
+    def fit(self, X, y):
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X)
+        if not isinstance(y, pd.DataFrame):
+            y = pd.DataFrame(list(y))
 
-    # @dispatch(pd.DataFrame, pd.DataFrame)
-    # def fit(self, X: pd.DataFrame, y: pd.DataFrame):
-    #     df = X.copy()
-    #     if 'target' not in X.columns:
-    #         df['target'] = y.copy()
-    #     else:
-    #         warnings.warn('name "target" in X.columns')
-    #         return
-    #     self.fit(df, target='target')
+        df = X.copy()
+        if 'target' not in X.columns:
+            df['target'] = y.copy()
+        else:
+            warnings.warn('name "target" in X.columns')
+            return
+        self.fit_legacy(df, target='target')
 
     def passing_tree(self, node: Node, row: pd.Series):
         if row[node.feature] <= node.threshold:
@@ -171,6 +173,9 @@ class Tree:
                 return node.right_value
 
     def predict(self, df: pd.DataFrame, predict_col: str):
+        if not isinstance(df, pd.DataFrame):
+            df = pd.DataFrame(df)
+
         if self.cat_features is not None:
             enc_cat_features = pd.DataFrame(self.encoder.transform(
                 X=df[self.cat_features]), index=df.index)

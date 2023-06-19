@@ -59,7 +59,7 @@ class SimpleTreeBoostRegressor:
             # print('----train-----')
             # print(train)
             # print('--------------\n\n')
-            tree.fit(train[train_features + [target]], target)
+            tree.fit_legacy(train[train_features + [target]], target)
 
             self.trees.append(deepcopy(tree))
             self.weights.append(self.lr)

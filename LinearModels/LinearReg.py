@@ -10,7 +10,7 @@ def lasso(weigts: np.ndarray, lmb: float):
 
 
 class LinearRegression:
-    def __init__(self, num_iters=400, regularization='ridge', learning_rate = 0.1, reg_lmb = 0.001):
+    def __init__(self, num_iters=400, regularization='ridge', learning_rate=0.1, reg_lmb=0.001):
         self.num_iters = num_iters
         self.w = None
         self.b = None
@@ -26,16 +26,15 @@ class LinearRegression:
         assert m_obj == m_obj_y
         self.X = np.hstack((np.ones((m_obj, 1)), X))
         self.y = y.reshape((-1, 1))
-
         self.w = np.zeros((n_features + 1, 1))
         # print(self.X.shape, self.w.shape)
 
-        learning_rate = 0.1
-        lmb = 0.0005
+        learning_rate = self.learning_rate
+        lmb = self.reg_lmb
         for i in range(self.num_iters):
             self.w = self.w - (
-                        learning_rate * (1 / (i + 1)) * np.sum((self.forward() - self.y) * self.X, axis=0).reshape(-1,
-                                                                                                                   1))
+                    learning_rate * (1 / (i + 1)) * np.sum((self.forward() - self.y)/m_obj * self.X, axis=0).reshape(-1, 1)
+            )
             self.w[1:, 0] = self.regularization(self.w[1:, 0], lmb)
 
     def forward(self):
